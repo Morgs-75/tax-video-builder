@@ -1,0 +1,97 @@
+<!doctype html><html><head><meta charset="utf-8"><style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--teal:#2fe3c4;--ink:#fff;--muted:#8fa2b5;--detail:#b7c5d4;--dim:rgba(255,255,255,.16)}
+html,body{width:1080px;height:1080px;overflow:hidden;
+ font-family:'Inter','Liberation Sans',Arial,sans-serif;
+ background:radial-gradient(1100px 760px at 24% -6%,#123247 0%,#0b1c2d 44%,#060f1a 100%);
+ color:var(--ink);-webkit-font-smoothing:antialiased;text-rendering:geometricPrecision}
+.grid{position:absolute;inset:0;
+ background-image:linear-gradient(rgba(130,170,195,.045) 1px,transparent 1px),
+  linear-gradient(90deg,rgba(130,170,195,.045) 1px,transparent 1px);
+ background-size:90px 90px;background-position:center;
+ -webkit-mask-image:radial-gradient(760px 560px at 42% 52%,#000 0%,transparent 78%);
+ mask-image:radial-gradient(760px 560px at 42% 52%,#000 0%,transparent 78%)}
+.stage{position:relative;width:1080px;height:1080px;padding:70px 72px 64px;display:flex;flex-direction:column}
+.mono{font-family:'JetBrains Mono','DejaVu Sans Mono',monospace}
+.header{display:flex;justify-content:space-between;align-items:center;z-index:2}
+.wordmark{display:flex;align-items:center;gap:15px;font-size:29px;font-weight:700;letter-spacing:6px;color:#fff}
+.wordmark .d{width:13px;height:13px;border-radius:50%;background:var(--teal);box-shadow:0 0 14px rgba(47,227,196,.6)}
+.date{font-size:22px;font-weight:500;letter-spacing:2px;color:var(--muted)}
+.rule{height:1px;background:rgba(130,165,190,.20);margin:24px 0 0;z-index:2}
+#content{flex:1;display:flex;flex-direction:column;justify-content:center;align-items:flex-start;z-index:2}
+.label{font-size:27px;font-weight:800;letter-spacing:5px;color:var(--teal);text-transform:uppercase}
+.big{font-size:86px;line-height:1.04;font-weight:800;letter-spacing:-1.5px;margin-top:20px;color:#fff}
+.sub{font-size:31px;line-height:1.42;color:#b2c0d0;margin-top:24px;max-width:860px}
+.chip{display:inline-flex;align-items:center;gap:11px;align-self:flex-start;
+ background:rgba(47,227,196,.08);border:1px solid rgba(47,227,196,.38);border-radius:999px;
+ padding:11px 22px;margin-bottom:32px;opacity:0;transform:translateY(6px);
+ transition:opacity .28s ease,transform .28s ease}
+.chip.show{opacity:1;transform:none}
+.chip .cd{width:9px;height:9px;border-radius:50%;background:var(--teal)}
+.chip span{font-size:22px;font-weight:800;letter-spacing:3px;color:var(--teal);text-transform:uppercase}
+.headline{font-size:62px;line-height:1.14;font-weight:800;letter-spacing:-0.5px;color:#fff}
+.headline.sm{font-size:52px}
+.detail{font-size:31px;line-height:1.45;color:var(--detail);margin-top:26px;max-width:905px}
+.detail.accent{color:var(--teal);font-weight:700;margin-top:18px}
+.caret{display:inline-block;width:4px;height:0.95em;background:var(--teal);margin-left:7px;
+ transform:translateY(5px);animation:blink 1s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+.footrule{height:1px;background:rgba(130,165,190,.18);margin-bottom:22px;z-index:2}
+.footer{display:flex;justify-content:space-between;align-items:center;z-index:2}
+.handle{font-size:21px;color:#8fa2b5;font-weight:500;letter-spacing:1px}
+.dots{display:flex;gap:13px}.dot{width:11px;height:11px;border-radius:50%;background:var(--dim)}
+.dot.on{background:var(--teal);box-shadow:0 0 10px rgba(47,227,196,.5)}
+#content.fade{opacity:0;transition:opacity .3s ease}
+</style></head><body>
+<div class="grid"></div>
+<div class="stage">
+  <div class="header"><div class="wordmark"><span class="d"></span><span id="wm">DAILY TAX SNAPSHOT</span></div><div class="date mono" id="dt"></div></div>
+  <div class="rule"></div>
+  <div id="content"></div>
+  <div class="footrule"></div>
+  <div class="footer"><div class="handle mono" id="handle"></div><div class="dots" id="dots"></div></div>
+</div>
+<script>
+const S = /*__SCENES__*/ {};
+const C=document.getElementById('content'), DOTS=document.getElementById('dots');
+document.getElementById('wm').textContent = S.wordmark || 'DAILY TAX SNAPSHOT';
+document.getElementById('dt').textContent = S.date_short || '';
+document.getElementById('handle').textContent = S.handle || '';
+const items = S.items || [];
+const dotEls=[];
+for(let i=0;i<items.length;i++){const d=document.createElement('span');d.className='dot';DOTS.appendChild(d);dotEls.push(d);}
+const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+const CPS = S.cps || 38;
+function setDot(i){dotEls.forEach((d,k)=>d.classList.toggle('on',k===i));}
+async function type(el,text,cps){cps=cps||CPS;const per=1000/cps;let s='';
+  for(const ch of String(text)){s+=ch;el.innerHTML=esc(s)+'<span class="caret"></span>';await sleep(ch===' '?per*0.5:per);} }
+function add(cls){const e=document.createElement('div');e.className=cls;C.appendChild(e);return e;}
+function chip(t){const e=document.createElement('div');e.className='chip';
+  e.innerHTML='<span class="cd"></span><span></span>';e.querySelector('span:last-child').textContent=t;
+  C.appendChild(e);requestAnimationFrame(()=>e.classList.add('show'));return e;}
+async function fadeSwap(){C.classList.add('fade');await sleep(320);C.innerHTML='';C.classList.remove('fade');}
+async function typedLine(cls,text,cps){const e=add(cls);await type(e,text,cps);e.innerHTML=esc(text);return e;}
+
+async function run(){
+  await sleep(400);
+  if(S.intro){setDot(-1);
+    if(S.intro.label) await typedLine('label',S.intro.label,26);
+    if(S.intro.big)   await typedLine('big',S.intro.big,20);
+    if(S.intro.sub)   await typedLine('sub',S.intro.sub);
+    await sleep(900);}
+  for(let i=0;i<items.length;i++){const it=items[i];
+    await fadeSwap();setDot(i);
+    if(it.chip) chip(it.chip);
+    if(it.headline) await typedLine('headline'+(it.small?' sm':''),it.headline,34);
+    if(it.detail)   await typedLine('detail',it.detail,46);
+    if(it.detail_gold) await typedLine('detail accent',it.detail_gold,40);
+    await sleep(it.hold||1100);}
+  if(S.outro){await fadeSwap();setDot(items.length-1);
+    if(S.outro.label) await typedLine('label',S.outro.label,26);
+    if(S.outro.big)   await typedLine('big',S.outro.big,26);
+    await sleep(1500);}
+  window.__done=true;
+}
+run();
+</script></body></html>
